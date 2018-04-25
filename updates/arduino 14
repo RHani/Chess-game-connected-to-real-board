@@ -142,17 +142,17 @@ void loop()
     for(int i=0;i<4;i++){
      Serial.println(receivedString[i]);
     }
-    receivedString="\0";
    //move_order(x0,y0,x1,y1);
    
-   // Smove_order(x0,y0,x1,y1);
-   // delay(2000);
-   // On();
-   // Smove_order(x1,y1,x2,y2);
-   // delay(2000);
-   // Off();
-   // Smove_order(x2,y2,x0,y0);
-
+    Smove_order(x0,y0,x1,y1);
+    delay(2000);
+    On();
+    Smove_order(x1,y1,x2,y2);
+    delay(2000);
+    Off();
+    Smove_order(x2,y2,x0,y0);
+    receivedString="\0";
+    
     }//serial
 
 }//end loop 
