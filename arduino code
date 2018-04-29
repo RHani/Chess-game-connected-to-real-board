@@ -1,63 +1,65 @@
 int dire1=2,step1=3, dire2=12,step2=13;
 int magnet=6;
 char x0='1', y0='a';
+char c;
 char x1,y1,x2,y2;
 String receivedString;
-
- void moveR()
+int num = 87;
+float Tdelay = 1.5;
+void moveR()
  {
   digitalWrite(dire1,HIGH);
-  for(int i=0;i<175;i++)
+  for(int i=0;i<num;i++)
   {
     digitalWrite(step1,HIGH);
-    delay(2);
+    delay(Tdelay);
     
     digitalWrite(step1,LOW);
-    delay(2);
+    delay(Tdelay);
   }
  }
 void moveL()
  {
   digitalWrite(dire1,LOW);
-  for(int i=0;i<175;i++)
+  for(int i=0;i<num;i++)
   {
     digitalWrite(step1,HIGH);
-    delay(2);
+    delay(Tdelay);
     digitalWrite(step1,LOW);
-    delay(2);
+    delay(Tdelay);
   }
  }
 void moveU()
  {
   digitalWrite(dire2,HIGH);
-  for(int i=0;i<175;i++)
+  for(int i=0;i<num;i++)
   {
     digitalWrite(step2,HIGH);
-    delay(2);
+    delay(Tdelay);
     digitalWrite(step2,LOW);
-    delay(2);
+    delay(Tdelay);
   }
  }
  
 void moveD()
  {
   digitalWrite(dire2,LOW);
-  for(int i=0;i<175;i++)
+  for(int i=0;i<num;i++)
   {
     digitalWrite(step2,HIGH);
-    delay(2);
+    delay(Tdelay);
     digitalWrite(step2,LOW);
-    delay(2);
+    delay(Tdelay);
   }
  }
  void On()
 {
-  digitalWrite(magnet,LOW);
+  digitalWrite(magnet,HIGH);
   delay(100);
 }
 void Off()
 {
-  digitalWrite(magnet,HIGH);
+  digitalWrite(magnet,LOW);
   delay(100);
 }
 void setup(){
@@ -67,43 +69,12 @@ void setup(){
   pinMode(dire2,OUTPUT);
   
   pinMode(step1,OUTPUT);
-  
+  pinMode(magnet,OUTPUT);
+  Off();
   pinMode(step2,OUTPUT);
   //x0='a';y0='1'; 
   Serial.begin(9600);
   
-}
-void move_order(char X1,char Y1, char X2, char Y2 ){
-   if(Y1>='a' && Y1<='h' && Y2>='a' && Y2<='h' && X1>='1' && X1<='8' && X2>='1' && X2<='8')
-    {
-    int distx = X2-X1;
-    int disty = Y2-Y1;
-    Serial.println(distx);
-    Serial.println(disty);
-    //=======================x direction==========================
-    if(distx>0)
-    {
-      for(int i=0;i<distx;i++) moveR();
-    }
-    
-    else
-    {
-      distx*=(-1);
-      for(int i=0;i<distx;i++) moveL();
-    }
-    
-    //=====================y direction===========================
-    if(disty>0){
-      for(int i=0;i<disty;i++) moveU();
-    }
-    else 
-    {
-      disty*=(-1);
-      for(int i=0;i<disty;i++) moveD();
-    }
-     
-   }//endif
-    
 }
 void Smove_order(char X1,char Y1, char X2, char Y2 ){
     int distx = X2-X1;
@@ -111,24 +82,31 @@ void Smove_order(char X1,char Y1, char X2, char Y2 ){
     //=======================x direction==========================
     if(distx>0)
     {
-      for(int i=0;i<distx;i++) moveR();
+      moveU();
+      for(int i=0;i<distx;i++) {moveR();moveR();}
+      moveD();
     }
     
-    else
+    else if (distx<0)
     {
       distx*=(-1);
-      for(int i=0;i<distx;i++) moveL();
+      moveU();
+      for(int i=0;i<distx;i++) {moveL();moveL();}
+      moveD();
     }
     
     //=====================y direction===========================
     if(disty>0){
-     
-      for(int i=0;i<disty;i++) moveU();
+      moveR();
+      for(int i=0;i<disty;i++) {moveU();moveU();}
+      moveL();
     }
-    else 
+    else if(disty<0)
     {
+      moveR();
       disty*=(-1);
-      for(int i=0;i<disty;i++) moveD();
+      for(int i=0;i<disty;i++) {moveD();moveD();}
+      moveL();
     }
      
        
@@ -137,20 +115,49 @@ void Smove_order(char X1,char Y1, char X2, char Y2 ){
 void loop()
 {
   if(Serial.available()){  
+    //char c = Serial.read();
     receivedString = Serial.readStringUntil('\n');
   
     y1=receivedString[0]; //a
     x1=receivedString[1]; //7
     y2=receivedString[2]; //a
     x2=receivedString[3]; //5
+    /*
+    if(c=='T' && y1>='a' && y1<='h' ){
+      Smove_order(x0,y0,x2,y2);
+      delay(2000);
+      On();
+      Smove_order(x2,y2,(x0-2),(y0-2));
+      delay(2000);
+      Off();
+      Smove_order((x0-2),(y0-2),x1,y1);
+      delay(2000);
+      On();
+      Smove_order(x1,y1,x2,y2);
+      Off();
+      }
+      
+    else {
+    //receivedString = Serial.readStringUntil('\n');
+  
+    //y1=receivedString[0]; //a
+    //x1=receivedString[1]; //7
+    //y2=receivedString[2]; //a
+    //x2=receivedString[3]; //5
+ */
+    if(y1>='a' &&y1<='h'){
     
-    //move_order(x0,y0,x1,y1);
     Smove_order(x0,y0,x1,y1);
     delay(2000);
+    On();
+    delay(1000);
     Smove_order(x1,y1,x2,y2);
     delay(2000);
+    Off();
+    delay(1000);
     Smove_order(x2,y2,x0,y0);
-
+    }
+   // }
     }//serial
 
 }//end loop 
