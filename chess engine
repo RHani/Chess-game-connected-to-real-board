@@ -341,6 +341,7 @@ Coordinate checking(char Piece, int x, int y) {
 					Max = Score - Begins;
 					taken_by_piece = true;
 				}
+				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
 				if (Score > 5) break;
 			}
 		}
@@ -362,6 +363,7 @@ Coordinate checking(char Piece, int x, int y) {
 					Max = Score - Begins;
 					taken_by_piece = true;
 				}
+				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
 				if (Score > 5) break;
 			}
 		}
@@ -383,6 +385,7 @@ Coordinate checking(char Piece, int x, int y) {
 					Max = Score - Begins;
 					taken_by_piece = true;
 				}
+				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
 				if (Score > 5) break;
 			}
 		}
@@ -404,6 +407,7 @@ Coordinate checking(char Piece, int x, int y) {
 					Max = Score - Begins;
 					taken_by_piece = true;
 				}
+				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
 				if (Score > 5) break;
 			}//end of loop
 		}
@@ -1212,7 +1216,7 @@ bool check_legal() {
 				}
 			}
 		}
-	}
+	}//end of rock check
 
 	return true;
 }
