@@ -947,26 +947,19 @@ void arduino_fn(int x1, int y, int x2, int y2) {
 	}
 }
 //=========================================================================================================================//
-void arduino_fn_pc(int X1, int Y, int X2, int Y2) {
-
+void arduino_fn_pc() {
 	if (arduino.isConnected()) {
-		string moves = "";
-		y  = X1 + '8';
-		x1 = Y + 'a';
-		x2 = Y2 + 'a';
-		y2 = X2 + '7';
+		
+		char *c_string = new char[str.size() + 1];
+		
+		for (int i = 0; i < 4; i++)
+			c_string[i] = str[i];
 
-		moves.push_back(x1); moves.push_back(y); moves.push_back(x2); moves.push_back(y2);
-		cout << "here is your hell moves: " << moves << endl;
-		char *c_string = new char[moves.size() + 1];
-		for (int i = 0; i < moves.size(); i++)
-			c_string[i] = moves[i];
-
-		c_string[moves.size()] = '\n';
+		c_string[str.size()] = '\n';
 
 		arduino.writeSerialPort(c_string, MAX_DATA_LENGTH);
 
-		//Sleep(5000);
+		Sleep(5000);
 		delete[] c_string;
 
 	}
@@ -1448,7 +1441,6 @@ char winner() {
 	if (player1 == 1 && player2 == 1) return 't';//tie
 	if (player1 == 0 && player2 == 1) return 'u';//user
 	if (player1 == 1 && player2 == 0) return 'p';//pc
-
 }
 //=========================================================================================================================//
 void beginner() {
@@ -1477,8 +1469,8 @@ void beginner() {
 	oldPos = toCoord(str[0], str[1]);
 	newPos = toCoord(str[2], str[3]);
 	for (int i = 0; i < 32; i++) if (f[i].getPosition() == oldPos) n = i;
-	/////////////////////////////////////////////////////////////////////////////////////////////////////////////i want to add something over here 
-	arduino_fn_pc(Move.x, Move.y, End.x, End.y);
+	///////////////
+	arduino_fn_pc();
 
 	/////animation///////
 	for (int k = 0; k < 50; k++){
