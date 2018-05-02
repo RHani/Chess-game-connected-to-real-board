@@ -1,0 +1,1519 @@
+#include <SFML/Graphics.hpp>
+#include <iostream>
+#include <time.h>
+#include <math.h>
+#include <string>
+#include "Connector1.hpp"
+#include "SerialPort.h"
+#define endl '\n'
+//=========================================================================================================================//
+using namespace sf;
+using std::cout;
+using std::string;
+int size = 56; //board's square size
+int player = 2;
+Vector2f offset(28, 28); //Vector2f is vector of float that carry 2 variables (X, Y). 28 is half of the sqaure.
+
+Sprite f[32]; //to deal with figures.. place and move it
+std::string position = ""; //Carry all moves that happened from the beginning of the game! in form "ABCD EFGH SAMP"
+
+bool taken_by_piece = false;
+bool isMove = false;
+float dx = 0, dy = 0;
+float Max;
+Vector2f oldPos, newPos; 
+std::string str; //movement data
+int n = 0, indexOfPiece; // index of chosen piece
+Vector2i pos; //mouse position
+Event e; // events listener
+
+char *port_name = "\\\\.\\COM6";
+char output[MAX_DATA_LENGTH];
+char incomingData[MAX_DATA_LENGTH];
+SerialPort arduino(port_name);
+
+char x1, x2; int y, y2;
+
+//Load images and graphics
+Texture t1, t2;
+Sprite sBoard; //Declare the board with background
+
+/////////////////////////////////////////////////////////////////////////
+//RenderWindow->deals with 2D graphics
+//VideoMode->Create window with width and hight in pixels
+//NOTE: it's 504*504 because it's the width and hight of the board image.
+RenderWindow window(VideoMode(504, 504), "The Chess! (press SPACE)");
+//=========================================================================================================================//
+void swicht_player() {
+	player = 3 - player;
+}
+//initial board
+//=========================================================================================================================//
+char board[8][8] = {
+	{ 'R','N','B','Q','K','B','N','R' },
+	{ 'P','P','P','P','P','P','P','P' },
+	{ 'e','e','e','e','e','e','e','e' },
+	{ 'e','e','e','e','e','e','e','e' },
+	{ 'e','e','e','e','e','e','e','e' },
+	{ 'e','e','e','e','e','e','e','e' },
+	{ 'p','p','p','p','p','p','p','p' },
+	{ 'r','n','b','q','k','b','n','r' },
+};
+//=========================================================================================================================//
+float Pawn[8][8] =
+{
+	{ 0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0 },
+	{ 0.5,1.0,1.0,-2.0,-2.0,1.0,1.0,0.5 },
+	{ 0.5,-0.5,-1.0,0.0,0.0,-1.0,-0.5,0.5 },
+	{ 0.0,0.0,0.0,2.0,2.0,0.0,0.0,0.0 },
+	{ 0.5,0.5,1.0,2.5,2.5,1.0,0.5,0.5 },
+	{ 1.0,1.0,2.0,3.0,3.0,2.0,1.0,1.0 },
+	{ 5.0,5.0,5.0,5.0,5.0,5.0,5.0,5.0 },
+	{ 0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0 },
+};
+float Rock[8][8] =
+{
+	{ 0.0,0.0,0.0,0.5,0.5,0.0,0.0,0.0 },
+	{ 0.5,0.0,0.0,0.0,0.0,0.0,0.0,0.5 },
+	{ 0.5,0.0,0.0,0.0,0.0,0.0,0.0,0.5 },
+	{ 0.5,0.0,0.0,0.0,0.0,0.0,0.0,0.5 },
+	{ 0.5,0.0,0.0,0.0,0.0,0.0,0.0,0.5 },
+	{ 0.5,0.0,0.0,0.0,0.0,0.0,0.0,0.5 },
+	{ 0.5,1.0,1.0,1.0,1.0,1.0,1.0,0.5 },
+	{ 0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0 },
+};
+float Bishop[8][8] =
+{
+	{ -2.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-2.0 },
+	{ -1.0,0.5,0.0,0.0,0.0,0.0,0.5,-1.0 },
+	{ -1.0,0.0,1.0,1.0,1.0,1.0,0.0,-1.0 },
+	{ -1.0,0.5,0.5,1.0,1.0,0.5,0.5,-1.0 },
+	{ -1.0,0.5,0.5,1.0,1.0,0.5,0.5,-1.0 },
+	{ -1.0,0.0,0.5,1.0,1.0,0.5,0.0,-1.0 },
+	{ -1.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.0 },
+	{ -2.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-2.0 },
+};
+float Queen[8][8] =
+{
+	{ -2.0,-1.0,-1.0,-0.5,-0.5,-1.0,-1.0,-2.0 },
+	{ -1.0,0.0,0.5,0.0,0.0,0.0,0.0,-1.0 },
+	{ -1.0,0.5,0.5,0.5,0.5,0.5,0.0,-1.0 },
+	{ 0.0,0.0,0.5,0.5,0.5,0.5,0.0,-0.5 },
+	{ -0.5,0.0,0.5,0.5,0.5,0.5,0.0,-0.5 },
+	{ -1.0,0.0,0.5,0.5,0.5,0.5,0.0,-1.0 },
+	{ -1.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.0 },
+	{ -2.0,-1.0,-1.0,-0.5,-0.5,-1.0,-1.0,-2.0 },
+};
+float  King[8][8] =
+{
+	{ 2.0,3.0,1.0,0.0,0.0,1.0,3.0,2.0 },
+	{ 2.0,2.0,0.0,0.0,0.0,0.0,2.0,2.0 },
+	{ -1.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-1.0 },
+	{ -2.0,-3.0,-3.0,-4.0,-4.0,-3.0,-3.0,-2.0 },
+	{ -3.0,-4.0,-4.0,-5.0,-5.0,-4.0,-4.0,-3.0 },
+	{ -3.0,-4.0,-4.0,-5.0,-5.0,-4.0,-4.0,-3.0 },
+	{ -3.0,-4.0,-4.0,-5.0,-5.0,-4.0,-4.0,-3.0 },
+	{ -3.0,-4.0,-4.0,-5.0,-5.0,-4.0,-4.0,-3.0 },
+
+};
+float Knight[8][8] =
+{
+	{ -5.0,-4.0,-3.0,-3.0,-3.0,-3.0,-4.0,-5.0 },
+	{ -4.0,-2.0,0.0,0.5,0.5,0.0,-2.0,-4.0 },
+	{ -3.0,0.5,1.0,1.5,1.5,1.0,0.5,-3.0 },
+	{ -3.0,0.0,1.5,2.0,2.0,1.5,0.0,-3.0 },
+	{ -3.0,0.5,1.5,2.0,2.0,1.5,0.5,-3.0 },
+	{ -3.0,0.0,1.0,1.5,1.5,1.0,0.0,-3.0 },
+	{ -4.0,-2.0,0.0,0.0,0.0,0.0,-2.0,-4.0 },
+	{ -5.0,-4.0,-3.0,-3.0,-3.0,-3.0,-4.0,-5.0 },
+};
+//=========================================================================================================================//
+struct Coordinate {
+	int x, y;
+	float Max;
+};
+Coordinate checking(char Piece, int x, int y) {
+	Coordinate Place;
+	Place.x = -1;
+	Place.y = -1;
+	//float Max = -10000;
+	Place.Max = Max;
+	Max = -1000;
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~pawn~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+	if (Piece == 'P')
+	{
+		//if the place is empty then we give it a score of five
+
+		if (x == 1) {//this is the first move for the pawn
+			float Begins = Pawn[x][y];
+			float Score = 0;
+			//for the first condition that iot can move two step
+			if (board[x + 1][y] == 'e') { //moving one step and its empty
+				float Score = Pawn[x + 1][y];
+				if (Begins - Score > Max) {
+					Place.x = x + 1;
+					Place.y = y;
+					Place.Max = Score - Begins;
+					Max = Place.Max;
+				}
+			}
+			if (board[x + 1][y] == 'e' && board[x + 2][y] == 'e') {// in case the pawn will move two steps
+				float Score = Pawn[x + 2][y];
+				if (Begins - Score  > Max) {
+					Place.x = x + 2;
+					Place.y = y;
+					Place.Max = Score - Begins;
+					Max = Place.Max;
+				}
+			}
+
+			if ((board[x + 1][y + 1] == 'r' || board[x + 1][y + 1] == 'q' || board[x + 1][y + 1] == 'k' || board[x + 1][y + 1] == 'p' || board[x + 1][y + 1] == 'n' || board[x + 1][y + 1] == 'b') && (y != 7)) {
+				float Score = Pawn[x + 1][y + 1];
+				if (board[x + 1][y + 1] == 'r') Score += 50;
+				else if (board[x + 1][y + 1] == 'n')Score += 30;
+				else if (board[x + 1][y + 1] == 'p')Score += 10;
+				else if (board[x + 1][y + 1] == 'q')Score += 90;
+				else if (board[x + 1][y + 1] == 'b')Score += 30;
+				else if (board[x + 1][y + 1] == 'k')Score += 900;
+				if (Score - Begins > Max) {
+					Place.x = x + 1;
+					Place.y = y + 1;
+					Place.Max = Score - Begins;
+					Max = Place.Max;
+					taken_by_piece = true;
+				}
+			}
+			if (board[x + 1][y - 1] == 'r' || board[x + 1][y - 1] == 'q' || board[x + 1][y - 1] == 'k' || board[x + 1][y - 1] == 'p' || board[x + 1][y - 1] == 'n' || board[x + 1][y - 1] == 'b') {
+				float Score = Pawn[x + 1][y - 1];
+				if (board[x + 1][y - 1] == 'r') Score += 50;
+				else if (board[x + 1][y - 1] == 'n')Score += 30;
+				else if (board[x + 1][y - 1] == 'p')Score += 10;
+				else if (board[x + 1][y - 1] == 'q')Score += 90;
+				else if (board[x + 1][y - 1] == 'b')Score += 30;
+				else if (board[x + 1][y - 1] == 'k')Score += 900;
+				if (Score - Begins > Max) {
+					Place.x = x + 1;
+					Place.y = y - 1;
+					Place.Max = Score - Begins;
+					Max = Place.Max;
+					taken_by_piece = true;
+				}
+			}
+
+
+		}//end if(x==1)
+		else {
+			float Begins = Pawn[x][y];
+			float Score = 0;
+			if (board[x + 1][y] == 'e') { //moving one step and its empty 
+				float Score = Pawn[x + 1][y];
+				if (Begins - Score > Max) {
+					Place.x = x + 1;
+					Place.y = y;
+					Place.Max = Score - Begins;
+					Max = Place.Max;
+				}
+			}//
+			if (board[x + 1][y + 1] == 'r' || board[x + 1][y + 1] == 'q' || board[x + 1][y + 1] == 'k' || board[x + 1][y + 1] == 'p' || board[x + 1][y + 1] == 'n' || board[x + 1][y + 1] == 'b') {
+				float Score = Pawn[x + 1][y + 1];
+				if (board[x + 1][y + 1] == 'r') Score += 50;
+				else if (board[x + 1][y + 1] == 'n')Score += 30;
+				else if (board[x + 1][y + 1] == 'p')Score += 10;
+				else if (board[x + 1][y + 1] == 'q')Score += 90;
+				else if (board[x + 1][y + 1] == 'b')Score += 30;
+				else if (board[x + 1][y + 1] == 'k')Score += 900;
+				if (Score - Begins > Max) {
+					Place.x = x + 1;
+					Place.y = y + 1;
+					Place.Max = Score - Begins;
+					Max = Place.Max;
+					taken_by_piece = true;
+				}
+			}
+			if (board[x - 1][y + 1] == 'r' || board[x - 1][y + 1] == 'q' || board[x - 1][y + 1] == 'k' || board[x - 1][y + 1] == 'p' || board[x - 1][y + 1] == 'n' || board[x - 1][y + 1] == 'b') {
+				float Score = Pawn[x - 1][y + 1];
+				if (board[x - 1][y + 1] == 'r') Score += 50;
+				else if (board[x - 1][y + 1] == 'n')Score += 30;
+				else if (board[x - 1][y + 1] == 'p')Score += 10;
+				else if (board[x - 1][y + 1] == 'q')Score += 90;
+				else if (board[x - 1][y + 1] == 'b')Score += 30;
+				else if (board[x - 1][y + 1] == 'k')Score += 900;
+				if (Score - Begins > Max) {
+					Place.x = x - 1;
+					Place.y = y + 1;
+					Place.Max = Score - Begins;
+					Max = Place.Max;
+					taken_by_piece = true;
+				}
+			}
+		}
+
+	}
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~rock~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+	//taken_by_piece = false;
+	if (Piece == 'R') {
+		float Begins = Rock[x][y];
+		float Score = 0;
+
+		if (board[x + 1][y] == 'e' || board[x + 1][y] == 'r' || board[x + 1][y] == 'n' || board[x + 1][y] == 'p' || board[x + 1][y] == 'q' || board[x + 1][y] == 'b' || board[x + 1][y] == 'k') { //moving down
+			for (int i = x + 1; i < 8; i++) {
+				float Score = Rock[i][y];
+				if (board[i][y] == 'r') Score += 50;
+				else if (board[i][y] == 'n')Score += 30;
+				else if (board[i][y] == 'p')Score += 10;
+				else if (board[i][y] == 'q')Score += 90;
+				else if (board[i][y] == 'b')Score += 30;
+				else if (board[i][y] == 'k')Score += 900;
+				else if (board[i][y] == 'e')Score += 0.5;
+				if (Score - Begins > Max) {
+					Place.x = i;
+					Place.y = y;
+					Place.Max = Score - Begins;
+					Max = Score - Begins;
+					taken_by_piece = true;
+				}
+				if (board[i][y] >= 'A' && board[i][y] <= 'Z') break;
+				if (Score > 10) break;
+			}
+		}//end of down if
+
+		if (board[x - 1][y] == 'e' || board[x - 1][y] == 'r' || board[x - 1][y] == 'n' || board[x - 1][y] == 'p' || board[x - 1][y] == 'q' || board[x - 1][y] == 'b' || board[x - 1][y] == 'k') { //moving up
+			for (int i = x - 1; i > 1; i--) {
+				float Score = Rock[i][y];
+				if (board[i][y] == 'r') Score += 50;
+				else if (board[i][y] == 'n')Score += 30;
+				else if (board[i][y] == 'p')Score += 10;
+				else if (board[i][y] == 'q')Score += 90;
+				else if (board[i][y] == 'b')Score += 30;
+				else if (board[i][y] == 'k')Score += 900;
+				else if (board[i][y] == 'e')Score += 0.5;
+				if (Score - Begins > Max) {
+					Place.x = i;
+					Place.y = y;
+					Place.Max = Score - Begins;
+					Max = Score - Begins;
+					taken_by_piece = true;
+				}
+				if (board[i][y] >= 'A' && board[i][y] <= 'Z') break;
+				if (Score > 5) break;
+			}
+		}//end of up if
+
+		if (board[x][y + 1] == 'e' || board[x][y + 1] == 'r' || board[x][y + 1] == 'n' || board[x][y + 1] == 'p' || board[x][y + 1] == 'q' || board[x][y + 1] == 'b' || board[x][y + 1] == 'k') { //moving up
+			for (int i = y + 1; i < 8; i++) {
+				float Score = Rock[x][i];
+				if (board[x][i] == 'r') Score += 50;
+				else if (board[x][i] == 'n')Score += 30;
+				else if (board[x][i] == 'p')Score += 10;
+				else if (board[x][i] == 'q')Score += 90;
+				else if (board[x][i] == 'b')Score += 30;
+				else if (board[x][i] == 'k')Score += 900;
+				else if (board[x][i] == 'e')Score += 0.5;
+				if (Score - Begins > Max) {
+					Place.x = x;
+					Place.y = i;
+					Place.Max = Score - Begins;
+					Max = Score - Begins;
+					taken_by_piece = true;
+				}
+				if (board[x][i] >= 'A' && board[x][i] <= 'Z') break;
+				if (Score > 5) break;
+			}
+		}//end of right if
+
+		if (board[x][y - 1] == 'e' || board[x][y - 1] == 'r' || board[x][y - 1] == 'n' || board[x][y - 1] == 'p' || board[x][y - 1] == 'q' || board[x][y - 1] == 'b' || board[x][y - 1] == 'k') { //moving up
+			for (int i = y - 1; i > 1; i--) {
+				float Score = Rock[x][i];
+				if (board[x][i] == 'r') Score += 50;
+				else if (board[x][i] == 'n')Score += 30;
+				else if (board[x][i] == 'p')Score += 10;
+				else if (board[x][i] == 'q')Score += 90;
+				else if (board[x][i] == 'b')Score += 30;
+				else if (board[x][i] == 'k')Score += 900;
+				else if (board[x][i] == 'e')Score += 0.5;
+				if (Score - Begins > Max) {
+					Place.x = x;
+					Place.y = i;
+					Place.Max = Score - Begins;
+					Max = Score - Begins;
+					taken_by_piece = true;
+				}
+				if (board[x][i] >= 'A' && board[x][i] <= 'Z') break;
+				if (Score > 5) break;
+			}
+		}//end of right if
+	}//end of the rock
+
+	 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~BISHOP~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+	if (Piece == 'B') {
+		float Begins = Bishop[x][y];
+		float Score = 0;
+		if (board[x + 1][y + 1] == 'e' || board[x + 1][y + 1] == 'r' || board[x + 1][y + 1] == 'n' || board[x + 1][y + 1] == 'p' || board[x + 1][y + 1] == 'q' || board[x + 1][y + 1] == 'b' || board[x + 1][y + 1] == 'k') {
+			for (int i = x, j = y; i < 7 && j < 7; i++, j++) {
+				float Score = Bishop[i][j];
+				if (board[i][j] == 'r') Score += 50;
+				else if (board[i][j] == 'n')Score += 30;
+				else if (board[i][j] == 'p')Score += 10;
+				else if (board[i][j] == 'q')Score += 90;
+				else if (board[i][j] == 'b')Score += 30;
+				else if (board[i][j] == 'k')Score += 900;
+				else if (board[i][j] == 'e')Score += 0.5;
+				if (Score - Begins > Max) {
+					Place.x = i;
+					Place.y = j;
+					Place.Max = Score - Begins;
+					Max = Score - Begins;
+					taken_by_piece = true;
+				}
+				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
+				if (Score > 5) break;
+			}
+		}
+
+		if (board[x - 1][y + 1] == 'e' || board[x - 1][y + 1] == 'r' || board[x - 1][y + 1] == 'n' || board[x - 1][y + 1] == 'p' || board[x - 1][y + 1] == 'q' || board[x - 1][y + 1] == 'b' || board[x - 1][y + 1] == 'k') {
+			for (int i = x, j = y; i >0 && j < 7; i--, j++) {
+				float Score = Bishop[i][j];
+				if (board[i][j] == 'r') Score += 50;
+				else if (board[i][j] == 'n')Score += 30;
+				else if (board[i][j] == 'p')Score += 10;
+				else if (board[i][j] == 'q')Score += 90;
+				else if (board[i][j] == 'b')Score += 30;
+				else if (board[i][j] == 'k')Score += 900;
+				else if (board[i][j] == 'e')Score += 0.5;
+				if (Score - Begins > Max) {
+					Place.x = i;
+					Place.y = j;
+					Place.Max = Score - Begins;
+					Max = Score - Begins;
+					taken_by_piece = true;
+				}
+				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
+				if (Score > 5) break;
+			}
+		}
+
+		if (board[x + 1][y - 1] == 'e' || board[x + 1][y - 1] == 'r' || board[x + 1][y - 1] == 'n' || board[x + 1][y - 1] == 'p' || board[x + 1][y - 1] == 'q' || board[x + 1][y - 1] == 'b' || board[x + 1][y - 1] == 'k') {
+			for (int i = x, j = y; i <7 && j >0; i++, j--) {
+				float Score = Bishop[i][j];
+				if (board[i][j] == 'r') Score += 50;
+				else if (board[i][j] == 'n')Score += 30;
+				else if (board[i][j] == 'p')Score += 10;
+				else if (board[i][j] == 'q')Score += 90;
+				else if (board[i][j] == 'b')Score += 30;
+				else if (board[i][j] == 'k')Score += 900;
+				else if (board[i][j] == 'e')Score += 0.5;
+				if (Score - Begins > Max) {
+					Place.x = i;
+					Place.y = j;
+					Place.Max = Score - Begins;
+					Max = Score - Begins;
+					taken_by_piece = true;
+				}
+				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
+				if (Score > 5) break;
+			}
+		}
+
+		if (board[x - 1][y - 1] == 'e' || board[x - 1][y - 1] == 'r' || board[x - 1][y - 1] == 'n' || board[x - 1][y - 1] == 'p' || board[x - 1][y - 1] == 'q' || board[x - 1][y - 1] == 'b' || board[x - 1][y - 1] == 'k') {
+			for (int i = x, j = y; i >0 && j >0; i--, j--) {
+				float Score = Bishop[i][j];
+				if (board[i][j] == 'r') Score += 50;
+				else if (board[i][j] == 'n')Score += 30;
+				else if (board[i][j] == 'p')Score += 10;
+				else if (board[i][j] == 'q')Score += 90;
+				else if (board[i][j] == 'b')Score += 30;
+				else if (board[i][j] == 'k')Score += 900;
+				else if (board[i][j] == 'e')Score += 0.5;
+				if (Score - Begins > Max) {
+					Place.x = i;
+					Place.y = j;
+					Place.Max = Score - Begins;
+					Max = Score - Begins;
+					taken_by_piece = true;
+				}
+				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
+				if (Score > 5) break;
+			}//end of loop
+		}
+
+	}//end of bishop
+	 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~King~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+	if (Piece == 'K') {
+		float Begins = Bishop[x][y];
+		float Score = 0;
+		//////////////////////////diagonal moves
+		if (board[x - 1][y - 1] == 'e' || board[x - 1][y - 1] == 'r' || board[x - 1][y - 1] == 'n' || board[x - 1][y - 1] == 'p' || board[x - 1][y - 1] == 'q' || board[x - 1][y - 1] == 'b' || board[x - 1][y - 1] == 'k') {
+			float Score = Bishop[x - 1][y - 1];
+			if (board[x - 1][y - 1] == 'r') Score += 50;
+			else if (board[x - 1][y - 1] == 'n')Score += 30;
+			else if (board[x - 1][y - 1] == 'p')Score += 10;
+			else if (board[x - 1][y - 1] == 'q')Score += 90;
+			else if (board[x - 1][y - 1] == 'b')Score += 30;
+			else if (board[x - 1][y - 1] == 'k')Score += 900;
+			else if (board[x - 1][y - 1] == 'e')Score += 0.5;
+			if (Score - Begins > Max) {
+				Place.x = x - 1;
+				Place.y = y - 1;
+				Place.Max = Score - Begins;
+				Max = Score - Begins;
+				taken_by_piece = true;
+			}
+		}
+		if (board[x + 1][y - 1] == 'e' || board[x + 1][y - 1] == 'r' || board[x + 1][y - 1] == 'n' || board[x + 1][y - 1] == 'p' || board[x + 1][y - 1] == 'q' || board[x + 1][y - 1] == 'b' || board[x + 1][y - 1] == 'k') {
+			float Score = Bishop[x + 1][y - 1];
+			if (board[x + 1][y - 1] == 'r') Score += 50;
+			else if (board[x + 1][y - 1] == 'n')Score += 30;
+			else if (board[x + 1][y - 1] == 'p')Score += 10;
+			else if (board[x + 1][y - 1] == 'q')Score += 90;
+			else if (board[x + 1][y - 1] == 'b')Score += 30;
+			else if (board[x + 1][y - 1] == 'k')Score += 900;
+			else if (board[x + 1][y - 1] == 'e')Score += 0.5;
+			if (Score - Begins > Max) {
+				Place.x = x + 1;
+				Place.y = y - 1;
+				Place.Max = Score - Begins;
+				Max = Score - Begins;
+				taken_by_piece = true;
+			}
+		}
+		if (board[x - 1][y + 1] == 'e' || board[x - 1][y + 1] == 'r' || board[x - 1][y + 1] == 'n' || board[x - 1][y + 1] == 'p' || board[x - 1][y + 1] == 'q' || board[x - 1][y + 1] == 'b' || board[x - 1][y + 1] == 'k') {
+			float Score = Bishop[x - 1][y + 1];
+			if (board[x - 1][y + 1] == 'r') Score += 50;
+			else if (board[x - 1][y + 1] == 'n')Score += 30;
+			else if (board[x - 1][y + 1] == 'p')Score += 10;
+			else if (board[x - 1][y + 1] == 'q')Score += 90;
+			else if (board[x - 1][y + 1] == 'b')Score += 30;
+			else if (board[x - 1][y + 1] == 'k')Score += 900;
+			else if (board[x - 1][y + 1] == 'e')Score += 0.5;
+			if (Score - Begins > Max) {
+				Place.x = x - 1;
+				Place.y = y + 1;
+				Place.Max = Score - Begins;
+				Max = Score - Begins;
+				taken_by_piece = true;
+			}
+		}
+		if (board[x + 1][y + 1] == 'e' || board[x + 1][y + 1] == 'r' || board[x + 1][y + 1] == 'n' || board[x + 1][y + 1] == 'p' || board[x + 1][y + 1] == 'q' || board[x + 1][y + 1] == 'b' || board[x + 1][y + 1] == 'k') {
+			float Score = Bishop[x - 1][y + 1];
+			if (board[x + 1][y + 1] == 'r') Score += 50;
+			else if (board[x + 1][y + 1] == 'n')Score += 30;
+			else if (board[x + 1][y + 1] == 'p')Score += 10;
+			else if (board[x + 1][y + 1] == 'q')Score += 90;
+			else if (board[x + 1][y + 1] == 'b')Score += 30;
+			else if (board[x + 1][y + 1] == 'k')Score += 900;
+			else if (board[x + 1][y + 1] == 'e')Score += 0.5;
+			if (Score - Begins > Max) {
+				Place.x = x + 1;
+				Place.y = y + 1;
+				Place.Max = Score - Begins;
+				Max = Score - Begins;
+				taken_by_piece = true;
+			}
+		}
+		//////////////////////////stright moves
+		if (board[x][y + 1] == 'e' || board[x][y + 1] == 'r' || board[x][y + 1] == 'n' || board[x][y + 1] == 'p' || board[x][y + 1] == 'q' || board[x][y + 1] == 'b' || board[x][y + 1] == 'k') {
+			float Score = Bishop[x][y + 1];
+			if (board[x][y + 1] == 'r') Score += 50;
+			else if (board[x][y + 1] == 'n')Score += 30;
+			else if (board[x][y + 1] == 'p')Score += 10;
+			else if (board[x][y + 1] == 'q')Score += 90;
+			else if (board[x][y + 1] == 'b')Score += 30;
+			else if (board[x][y + 1] == 'k')Score += 900;
+			else if (board[x][y + 1] == 'e')Score += 0.5;
+			if (Score - Begins > Max) {
+				Place.x = x;
+				Place.y = y + 1;
+				Place.Max = Score - Begins;
+				Max = Score - Begins;
+				taken_by_piece = true;
+			}
+		}
+		if (board[x][y - 1] == 'e' || board[x][y - 1] == 'r' || board[x][y - 1] == 'n' || board[x][y - 1] == 'p' || board[x][y - 1] == 'q' || board[x][y - 1] == 'b' || board[x][y - 1] == 'k') {
+			float Score = Bishop[x][y - 1];
+			if (board[x][y - 1] == 'r') Score += 50;
+			else if (board[x][y - 1] == 'n')Score += 30;
+			else if (board[x][y - 1] == 'p')Score += 10;
+			else if (board[x][y - 1] == 'q')Score += 90;
+			else if (board[x][y - 1] == 'b')Score += 30;
+			else if (board[x][y - 1] == 'k')Score += 900;
+			else if (board[x][y - 1] == 'e')Score += 0.5;
+			if (Score - Begins > Max) {
+				Place.x = x;
+				Place.y = y - 1;
+				Place.Max = Score - Begins;
+				Max = Score - Begins;
+				taken_by_piece = true;
+			}
+		}
+		if (board[x + 1][y] == 'e' || board[x + 1][y] == 'r' || board[x + 1][y] == 'n' || board[x + 1][y] == 'p' || board[x + 1][y] == 'q' || board[x + 1][y] == 'b' || board[x + 1][y] == 'k') {
+			float Score = Bishop[x + 1][y];
+			if (board[x][y - 1] == 'r') Score += 50;
+			else if (board[x + 1][y] == 'n')Score += 30;
+			else if (board[x + 1][y] == 'p')Score += 10;
+			else if (board[x + 1][y] == 'q')Score += 90;
+			else if (board[x + 1][y] == 'b')Score += 30;
+			else if (board[x + 1][y] == 'k')Score += 900;
+			else if (board[x + 1][y] == 'e')Score += 0.5;
+			if (Score - Begins > Max) {
+				Place.x = x + 1;
+				Place.y = y;
+				Place.Max = Score - Begins;
+				Max = Score - Begins;
+				taken_by_piece = true;
+			}
+		}
+		if (board[x - 1][y] == 'e' || board[x - 1][y] == 'r' || board[x - 1][y] == 'n' || board[x - 1][y] == 'p' || board[x - 1][y] == 'q' || board[x - 1][y] == 'b' || board[x - 1][y] == 'k') {
+			float Score = Bishop[x - 1][y];
+			if (board[x][y - 1] == 'r') Score += 50;
+			else if (board[x - 1][y] == 'n')Score += 30;
+			else if (board[x - 1][y] == 'p')Score += 10;
+			else if (board[x - 1][y] == 'q')Score += 90;
+			else if (board[x - 1][y] == 'b')Score += 30;
+			else if (board[x - 1][y] == 'k')Score += 900;
+			else if (board[x - 1][y] == 'e')Score += 0.5;
+			if (Score - Begins > Max) {
+				Place.x = x - 1;
+				Place.y = y;
+				Place.Max = Score - Begins;
+				Max = Score - Begins;
+				taken_by_piece = true;
+			}
+		}
+
+	}//end of king condition
+	 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Queen~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+	if (Piece == 'Q') {
+		float Begins = Queen[x][y];
+		float Score = 0;
+		/////////////////////////////diagonal moves
+		if (board[x + 1][y + 1] == 'e' || board[x + 1][y + 1] == 'r' || board[x + 1][y + 1] == 'n' || board[x + 1][y + 1] == 'p' || board[x + 1][y + 1] == 'q' || board[x + 1][y + 1] == 'b' || board[x + 1][y + 1] == 'k') {
+			for (int i = x, j = y; i < 7 && j < 7; i++, j++) {
+				float Score = Queen[i][j];
+				if (board[i][j] == 'r') Score += 50;
+				else if (board[i][j] == 'n')Score += 30;
+				else if (board[i][j] == 'p')Score += 10;
+				else if (board[i][j] == 'q')Score += 90;
+				else if (board[i][j] == 'b')Score += 30;
+				else if (board[i][j] == 'k')Score += 900;
+				else if (board[i][j] == 'e')Score += 0.5;
+				if (Score - Begins > Max) {
+					Place.x = i;
+					Place.y = j;
+					Place.Max = Score - Begins;
+					Max = Score - Begins;
+					taken_by_piece = true;
+				}
+				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
+				if (Score > 5) break;
+			}
+		}
+
+		if (board[x - 1][y + 1] == 'e' || board[x - 1][y + 1] == 'r' || board[x - 1][y + 1] == 'n' || board[x - 1][y + 1] == 'p' || board[x - 1][y + 1] == 'q' || board[x - 1][y + 1] == 'b' || board[x - 1][y + 1] == 'k') {
+			for (int i = x, j = y; i >0 && j < 7; i--, j++) {
+				float Score = Queen[i][j];
+				if (board[i][j] == 'r') Score += 50;
+				else if (board[i][j] == 'n')Score += 30;
+				else if (board[i][j] == 'p')Score += 10;
+				else if (board[i][j] == 'q')Score += 90;
+				else if (board[i][j] == 'b')Score += 30;
+				else if (board[i][j] == 'k')Score += 900;
+				else if (board[i][j] == 'e')Score += 0.5;
+				if (Score - Begins > Max) {
+					Place.x = i;
+					Place.y = j;
+					Place.Max = Score - Begins;
+					Max = Score - Begins;
+					taken_by_piece = true;
+				}
+				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
+				if (Score > 5) break;
+			}
+		}
+
+		if (board[x + 1][y - 1] == 'e' || board[x + 1][y - 1] == 'r' || board[x + 1][y - 1] == 'n' || board[x + 1][y - 1] == 'p' || board[x + 1][y - 1] == 'q' || board[x + 1][y - 1] == 'b' || board[x + 1][y - 1] == 'k') {
+			for (int i = x, j = y; i <7 && j >0; i++, j--) {
+				float Score = Queen[i][j];
+				if (board[i][j] == 'r') Score += 50;
+				else if (board[i][j] == 'n')Score += 30;
+				else if (board[i][j] == 'p')Score += 10;
+				else if (board[i][j] == 'q')Score += 90;
+				else if (board[i][j] == 'b')Score += 30;
+				else if (board[i][j] == 'k')Score += 900;
+				else if (board[i][j] == 'e')Score += 0.5;
+				if (Score - Begins > Max) {
+					Place.x = i;
+					Place.y = j;
+					Place.Max = Score - Begins;
+					Max = Score - Begins;
+					taken_by_piece = true;
+				}
+				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
+				if (Score > 5) break;
+			}
+		}
+
+		if (board[x - 1][y - 1] == 'e' || board[x - 1][y - 1] == 'r' || board[x - 1][y - 1] == 'n' || board[x - 1][y - 1] == 'p' || board[x - 1][y - 1] == 'q' || board[x - 1][y - 1] == 'b' || board[x - 1][y - 1] == 'k') {
+			for (int i = x, j = y; i >0 && j >0; i--, j--) {
+				float Score = Queen[i][j];
+				if (board[i][j] == 'r') Score += 50;
+				else if (board[i][j] == 'n')Score += 30;
+				else if (board[i][j] == 'p')Score += 10;
+				else if (board[i][j] == 'q')Score += 90;
+				else if (board[i][j] == 'b')Score += 30;
+				else if (board[i][j] == 'k')Score += 900;
+				else if (board[i][j] == 'e')Score += 0.5;
+				if (Score - Begins > Max) {
+					Place.x = i;
+					Place.y = j;
+					Place.Max = Score - Begins;
+					Max = Score - Begins;
+					taken_by_piece = true;
+				}
+				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
+				if (Score > 5) break;
+			}//end of loop
+		}
+		///////////////////////////////////////stright moves
+		if (board[x + 1][y] == 'e' || board[x + 1][y] == 'r' || board[x + 1][y] == 'n' || board[x + 1][y] == 'p' || board[x + 1][y] == 'q' || board[x + 1][y] == 'b' || board[x + 1][y] == 'k') { //moving down
+			for (int i = x + 1; i < 8; i++) {
+				float Score = Queen[i][y];
+				if (board[i][y] == 'r') Score += 50;
+				else if (board[i][y] == 'n')Score += 30;
+				else if (board[i][y] == 'p')Score += 10;
+				else if (board[i][y] == 'q')Score += 90;
+				else if (board[i][y] == 'b')Score += 30;
+				else if (board[i][y] == 'k')Score += 900;
+				else if (board[i][y] == 'e')Score += 0.5;
+				if (Score - Begins > Max) {
+					Place.x = i;
+					Place.y = y;
+					Place.Max = Score - Begins;
+					Max = Score - Begins;
+					taken_by_piece = true;
+				}
+				if (board[i][y] >= 'A' && board[i][y] <= 'Z') break;
+				if (Score > 10) break;
+			}
+		}//end of down if
+
+		if (board[x - 1][y] == 'e' || board[x - 1][y] == 'r' || board[x - 1][y] == 'n' || board[x - 1][y] == 'p' || board[x - 1][y] == 'q' || board[x - 1][y] == 'b' || board[x - 1][y] == 'k') { //moving up
+			for (int i = x - 1; i > 1; i--) {
+				float Score = Queen[i][y];
+				if (board[i][y] == 'r') Score += 50;
+				else if (board[i][y] == 'n')Score += 30;
+				else if (board[i][y] == 'p')Score += 10;
+				else if (board[i][y] == 'q')Score += 90;
+				else if (board[i][y] == 'b')Score += 30;
+				else if (board[i][y] == 'k')Score += 900;
+				else if (board[i][y] == 'e')Score += 0.5;
+				if (Score - Begins > Max) {
+					Place.x = i;
+					Place.y = y;
+					Place.Max = Score - Begins;
+					Max = Score - Begins;
+					taken_by_piece = true;
+				}
+				if (board[i][y] >= 'A' && board[i][y] <= 'Z') break;
+				if (Score > 5) break;
+			}
+		}//end of up if
+
+		if (board[x][y + 1] == 'e' || board[x][y + 1] == 'r' || board[x][y + 1] == 'n' || board[x][y + 1] == 'p' || board[x][y + 1] == 'q' || board[x][y + 1] == 'b' || board[x][y + 1] == 'k') { //moving up
+			for (int i = y + 1; i < 8; i++) {
+				float Score = Queen[x][i];
+				if (board[x][i] == 'r') Score += 50;
+				else if (board[x][i] == 'n')Score += 30;
+				else if (board[x][i] == 'p')Score += 10;
+				else if (board[x][i] == 'q')Score += 90;
+				else if (board[x][i] == 'b')Score += 30;
+				else if (board[x][i] == 'k')Score += 900;
+				else if (board[x][i] == 'e')Score += 0.5;
+				if (Score - Begins > Max) {
+					Place.x = x;
+					Place.y = i;
+					Place.Max = Score - Begins;
+					Max = Score - Begins;
+					taken_by_piece = true;
+				}
+				if (board[x][i] >= 'A' && board[x][i] <= 'Z') break;
+				if (Score > 5) break;
+			}
+		}//end of right if
+
+		if (board[x][y - 1] == 'e' || board[x][y - 1] == 'r' || board[x][y - 1] == 'n' || board[x][y - 1] == 'p' || board[x][y - 1] == 'q' || board[x][y - 1] == 'b' || board[x][y - 1] == 'k') { //moving up
+			for (int i = y - 1; i > 1; i--) {
+				float Score = Queen[x][i];
+				if (board[x][i] == 'r') Score += 50;
+				else if (board[x][i] == 'n')Score += 30;
+				else if (board[x][i] == 'p')Score += 10;
+				else if (board[x][i] == 'q')Score += 90;
+				else if (board[x][i] == 'b')Score += 30;
+				else if (board[x][i] == 'k')Score += 900;
+				else if (board[x][i] == 'e')Score += 0.5;
+				if (Score - Begins > Max) {
+					Place.x = x;
+					Place.y = i;
+					Place.Max = Score - Begins;
+					Max = Score - Begins;
+					taken_by_piece = true;
+				}
+				if (board[x][i] >= 'A' && board[x][i] <= 'Z') break;
+				if (Score > 5) break;
+			}
+		}//end of leftif
+
+	}//end of if queen condition
+	 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Knight~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+	if (Piece == 'N') {
+		float Begins = Knight[x][y];
+		///To MAke two step right and one up
+		if (x + 2<8 && y + 1<8 && (board[x + 2][y + 1] == 'e' || board[x + 2][y + 1] == 'r' || board[x + 2][y + 1] == 'n' || board[x + 2][y + 1] == 'p' || board[x + 2][y + 1] == 'q' ||
+			board[x + 2][y + 1] == 'b' || board[x + 2][y + 1] == 'k'))
+		{
+			int a = x + 2, b = y + 1;
+			float Score = Knight[a][b];
+			if (board[a][b] == 'r')Score += 50;
+			else if (board[a][b] == 'n')Score += 30;
+			else if (board[a][b] == 'p')Score += 10;
+			else if (board[a][b] == 'q')Score += 90;
+			else if (board[a][b] == 'b')Score += 30;
+			else if (board[a][b] == 'k')Score += 900;
+			if (Score - Begins>Max) {
+				Place.x = a;
+				Place.y = b;
+				Place.Max = Score - Begins;
+				Max = Place.Max;
+				taken_by_piece = true;
+			}
+		}
+		if (x + 1<8 && y + 2<8 && (board[x + 1][y + 2] == 'e' || board[x + 1][y + 2] == 'r' || board[x + 1][y + 2] == 'n' || board[x + 1][y + 2] == 'p' || board[x + 1][y + 2] == 'q' ||
+			board[x + 1][y + 2] == 'b' || board[x + 1][y + 2] == 'k'))
+		{
+			int a = x + 1, b = y + 2;
+			float Score = Knight[a][b];
+			if (board[a][b] == 'r')Score += 50;
+			else if (board[a][b] == 'n')Score += 30;
+			else if (board[a][b] == 'p')Score += 10;
+			else if (board[a][b] == 'q')Score += 90;
+			else if (board[a][b] == 'b')Score += 30;
+			else if (board[a][b] == 'k')Score += 900;
+			if (Score - Begins>Max) {
+				Place.x = a;
+				Place.y = b;
+				Place.Max = Score - Begins;
+				Max = Place.Max;
+				taken_by_piece = true;
+
+			}
+		}
+		if (x - 2>-1 && y + 1<8 && (board[x - 2][y + 1] == 'e' || board[x - 2][y + 1] == 'r' || board[x - 2][y + 1] == 'n' || board[x - 2][y + 1] == 'p' || board[x - 2][y + 1] == 'q' ||
+			board[x - 2][y + 1] == 'b' || board[x - 2][y + 1] == 'k'))
+		{
+			int a = x - 2, b = y + 1;
+			float Score = Knight[a][b];
+			if (board[a][b] == 'r')Score += 50;
+			else if (board[a][b] == 'n')Score += 30;
+			else if (board[a][b] == 'p')Score += 10;
+			else if (board[a][b] == 'q')Score += 90;
+			else if (board[a][b] == 'b')Score += 30;
+			else if (board[a][b] == 'k')Score += 900;
+			if (Score - Begins>Max) {
+				Place.x = a;
+				Place.y = b;
+				Place.Max = Score - Begins;
+				Max = Place.Max;
+				taken_by_piece = true;
+
+			}
+		}
+		if (x - 1>-1 && y + 2<8 && (board[x - 1][y + 2] == 'e' || board[x - 1][y + 2] == 'r' || board[x - 1][y + 2] == 'n' || board[x - 1][y + 2] == 'p' || board[x - 1][y + 2] == 'q' || board[x - 1][y + 2] == 'b' || board[x - 1][y + 2] == 'k'))
+		{
+			int a = x - 1, b = y + 2;
+			float Score = Knight[a][b];
+			if (board[a][b] == 'r')Score += 50;
+			else if (board[a][b] == 'n')Score += 30;
+			else if (board[a][b] == 'p')Score += 10;
+			else if (board[a][b] == 'q')Score += 90;
+			else if (board[a][b] == 'b')Score += 30;
+			else if (board[a][b] == 'k')Score += 900;
+			if (Score - Begins>Max) {
+				Place.x = a;
+				Place.y = b;
+				Place.Max = Score - Begins;
+				Max = Place.Max;
+				taken_by_piece = true;
+			}
+		}
+		if (x + 2<8 && y - 1>-1 && (board[x + 2][y - 1] == 'e' || board[x + 2][y - 1] == 'r' || board[x + 2][y - 1] == 'n' || board[x + 2][y - 1] == 'p' || board[x + 2][y - 1] == 'q' || board[x + 2][y - 1] == 'b' || board[x + 2][y - 1] == 'k'))
+		{
+			int a = x + 2, b = y - 1;
+			float Score = Knight[a][b];
+			if (board[a][b] == 'r')Score += 50;
+			else if (board[a][b] == 'n')Score += 30;
+			else if (board[a][b] == 'p')Score += 10;
+			else if (board[a][b] == 'q')Score += 90;
+			else if (board[a][b] == 'b')Score += 30;
+			else if (board[a][b] == 'k')Score += 900;
+			if (Score - Begins>Max) {
+				Place.x = a;
+				Place.y = b;
+				Place.Max = Score - Begins;
+				Max = Place.Max;
+				taken_by_piece = true;
+			}
+		}
+		if (x + 1<8 && y - 2>-1 && (board[x + 1][y - 2] == 'e' || board[x + 1][y - 2] == 'r' || board[x + 1][y - 2] == 'n' || board[x + 1][y - 2] == 'p' || board[x + 1][y - 2] == 'q' ||
+			board[x + 1][y - 2] == 'b' || board[x + 1][y - 2] == 'k'))
+		{
+
+			int a = x + 1, b = y - 2;
+			float Score = Knight[a][b];
+			if (board[a][b] == 'r')Score += 50;
+			else if (board[a][b] == 'n')Score += 30;
+			else if (board[a][b] == 'p')Score += 10;
+			else if (board[a][b] == 'q')Score += 90;
+			else if (board[a][b] == 'b')Score += 30;
+			else if (board[a][b] == 'k')Score += 900;
+			if (Score - Begins>Max) {
+				Place.x = a;
+				Place.y = b;
+				Place.Max = Score - Begins;
+				Max = Place.Max;
+				taken_by_piece = true;
+			}
+		}
+		if (x - 2>-1 && y - 1>-1 && (board[x - 2][y - 1] == 'e' || board[x - 2][y - 1] == 'r' || board[x - 2][y - 1] == 'n' || board[x - 2][y - 1] == 'p' || board[x - 2][y -
+			1] == 'q' || board[x - 2][y - 1] == 'b' || board[x - 2][y - 1] == 'k'))
+		{
+			int a = x - 2, b = y - 1;
+			float Score = Knight[a][b];
+			if (board[a][b] == 'r')Score += 50;
+			else if (board[a][b] == 'n')Score += 30;
+			else if (board[a][b] == 'p')Score += 10;
+			else if (board[a][b] == 'q')Score += 90;
+			else if (board[a][b] == 'b')Score += 30;
+			else if (board[a][b] == 'k')Score += 900;
+			if (Score - Begins>Max) {
+				Place.x = a;
+				Place.y = b;
+				Place.Max = Score - Begins;
+				Max = Place.Max;
+				taken_by_piece = true;
+			}
+		}
+		if (x - 1>-1 && y - 2>-1 && (board[x - 2][y - 1] == 'e' || board[x - 2][y - 1] == 'r' || board[x - 2][y - 1] == 'n' || board[x - 2][y - 1] == 'p' || board[x - 2][y -
+			1] == 'q' || board[x - 2][y - 1] == 'b' || board[x - 2][y - 1] == 'k'))
+		{
+			int a = x - 1, b = y - 2;
+			float Score = Knight[a][b];
+			if (board[a][b] == 'r')Score += 50;
+			else if (board[a][b] == 'n')Score += 30;
+			else if (board[a][b] == 'p')Score += 10;
+			else if (board[a][b] == 'q')Score += 90;
+			else if (board[a][b] == 'b')Score += 30;
+			else if (board[a][b] == 'k')Score += 900;
+			if (Score - Begins>Max) {
+				Place.x = a;
+				Place.y = b;
+				Place.Max = Score - Begins;
+				Max = Place.Max;
+				taken_by_piece = true;
+			}
+		}
+	}
+
+
+
+	return Place;
+}
+//=========================================================================================================================//
+void arduino_fn(int x1, int y, int x2, int y2) {
+
+	if (arduino.isConnected()) {
+		string moves = "";
+		//y++; y2++;
+		x1 = str[0]; y = str[1]; x2 = str[2]; y2 = str[3];
+		moves.push_back(x1); moves.push_back(y); moves.push_back(x2); moves.push_back(y2);
+		cout << "this is the moves string: " << moves << endl;
+		char *c_string = new char[moves.size() + 1];
+		for (int i = 0; i < moves.size(); i++)
+			c_string[i] = moves[i];
+
+		c_string[moves.size()] = '\n';
+
+		arduino.writeSerialPort(c_string, MAX_DATA_LENGTH);
+
+		//Sleep(5000);
+		delete[] c_string;
+
+	}
+}
+//=========================================================================================================================//
+void arduino_fn_pc(int X1, int Y, int X2, int Y2) {
+
+	if (arduino.isConnected()) {
+		string moves = "";
+		y  = X1 + '8';
+		x1 = Y + 'a';
+		x2 = Y2 + 'a';
+		y2 = X2 + '7';
+
+		moves.push_back(x1); moves.push_back(y); moves.push_back(x2); moves.push_back(y2);
+		cout << "here is your hell moves: " << moves << endl;
+		char *c_string = new char[moves.size() + 1];
+		for (int i = 0; i < moves.size(); i++)
+			c_string[i] = moves[i];
+
+		c_string[moves.size()] = '\n';
+
+		arduino.writeSerialPort(c_string, MAX_DATA_LENGTH);
+
+		//Sleep(5000);
+		delete[] c_string;
+
+	}
+}
+//=========================================================================================================================//
+//To convert numbers that we use in indexing the board to "ABCD" format that we can use to communicate with stockfish 
+std::string toChessNote(Vector2f p){
+	std::string s = "";
+	s += char(p.x / size + 97);
+	s += char(7 - p.y / size + 49);
+	return s;
+}
+//=========================================================================================================================//
+//To convert "ABCD" to numbers which we can use in indexing the board graphically
+Vector2f toCoord(char a, char b){
+	int x = int(a) - 97;
+	int y = 7 - int(b) + 49;
+	return Vector2f(x*size, y*size); // id * size -> to the position
+}
+//=========================================================================================================================//
+void move(std::string str){
+	//int the form "ABCD", AB indicates the old pos. CD refers to the new one
+	Vector2f oldPos = toCoord(str[0], str[1]);
+	Vector2f newPos = toCoord(str[2], str[3]);
+	int col = oldPos.x / size;
+	int col2 = newPos.x / size;
+	int y = oldPos.y / size;
+	int y2 = newPos.y / size;
+
+    //check
+	for (int i = 0; i<32; i++)
+		if (f[i].getPosition() == newPos) f[i].setPosition(-100, -100);
+
+	for (int i = 0; i<32; i++)
+		if (f[i].getPosition() == oldPos) f[i].setPosition(newPos);
+
+	board[y2][col2] = board[y][col];
+	board[y][col] = 'e';
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////// i wanna add the function here
+	arduino_fn(x1, y, x2, y2); //  i have just added this line 
+
+	//castling       //if the king didn't move
+	if (str == "e1g1") if (position.find("e1") == -1) move("h1f1");
+	if (str == "e8g8") if (position.find("e8") == -1) move("h8f8");
+	if (str == "e1c1") if (position.find("e1") == -1) move("a1d1");
+	if (str == "e8c8") if (position.find("e8") == -1) move("a8d8");
+}
+//=========================================================================================================================//
+void draw() {
+	////// draw  ///////
+	window.clear();
+	window.draw(sBoard);
+	for (int i = 0; i < 32; i++) f[i].move(offset);
+	for (int i = 0; i < 32; i++) window.draw(f[i]);  window.draw(f[n]);
+	for (int i = 0; i<32; i++) f[i].move(-offset);
+	window.display();
+}
+//=========================================================================================================================//
+//intitialize the board graphically (load graphics)
+void loadPosition(){
+	int k = 0;
+	for (int i = 0; i<8; i++)
+		for (int j = 0; j<8; j++)
+		{
+			char n = board[i][j]; //piece ID
+			if (n == 'e') continue; //empty cell
+			int id = 1;
+			if (isupper(n)) id *= -1; //the other player
+			if (n == 'p' || n == 'P') id *= 6;
+			if (n == 'r' || n == 'R') id *= 1;
+			if (n == 'n' || n == 'N') id *= 2;
+			if (n == 'b' || n == 'B') id *= 3;
+			if (n == 'k' || n == 'K') id *= 4;
+			if (n == 'q' || n == 'Q') id *= 5;
+			int x = abs(id) - 1;
+			int y = id>0 ? 1 : 0;
+			f[k].setTextureRect(IntRect(size*x, size*y, size, size)); //Bounds of the Board's sqaure
+			f[k].setPosition(size*j, size*i); 
+			k++;
+		}
+
+
+	//in case there is a move or more.. to reload the graphics
+	for (int i = 0; i<position.length(); i += 5)
+		move(position.substr(i, 4));
+}
+//=========================================================================================================================//
+bool isLegal(Vector2f oldPos, Vector2f newPos) {
+	if (abs(oldPos.x - newPos.x) < 10 && abs(oldPos.y - newPos.y) < 10) return false;
+
+	int col = oldPos.x / size;
+	int col2 = newPos.x / size;
+	int y = oldPos.y / size;
+	int y2 = newPos.y / size;
+	cout << col << ' ' << y << ' ' << col2 << ' ' << y2 << endl;
+
+	//checks if its opponent's piece
+	if (board[y][col] >= 'A' && board[y][col] <= 'Z') return false;
+
+	////////////////////////validating according to chess rules////////////////////////
+	//if one of your peices is there
+	string myPieces = "prnbkq";
+	for (int i = 0; i < myPieces.size(); i++)
+		if (board[y2][col2] == myPieces[i]) {
+			return false;
+		}
+	//empty position
+	if (board[y][col] == 'e')
+		return false;
+
+	//X AND Y DIFFERENCES
+	int rowDiff = y - y2; // moving among the 1-8 list (rows)
+	int colDiff = col2 - col; //int colDiff = col - col2; moving through a-h list (columns)
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~PAWN RULES~~~~~~~~~~~~~~~~~~~~~~~~
+	if (board[y][col] == 'p') {
+
+		if (rowDiff == 2 && y == 6 && colDiff == 0) {
+			if (board[y - 1][col] != 'e')
+				return false;
+			return true;
+		}
+		if (rowDiff == 2 && y != 6) return false;
+		if (rowDiff != 1) return false;
+
+		if (abs(colDiff) == 1 && abs(rowDiff) == 1) {
+			string enemy = "PRNBKQ"; int cnt = 0;
+			for (int i = 0; i < enemy.size(); i++) {
+				if (board[y2][col2] == enemy[i]) cnt++;
+			}
+			if (cnt == 1) return true;
+			else return false;
+		}
+		if (colDiff == 0 && abs(rowDiff) == 1 && board[y2][col2] != 'e') return false;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~KING RULES~~~~~~~~~~~~~~~~~~~~~~~~
+	if (board[y][col] == 'k') {
+		if (abs(rowDiff) > 1 || abs(colDiff) > 1) return false;
+		if (board[y2][col2] == 'e' || isupper(board[y2][col2])) return true;
+		
+		else if (abs(rowDiff) == 1 || abs(rowDiff) == 0) {
+			if (abs(colDiff) == 1 || abs(colDiff) == 0) {
+				if (board[y2][col2] == 'e' || (board[y2][col2] >= 'A' && board[y2][col2] <= 'Z')) return true;
+			}
+		}
+		else if (abs(rowDiff) == 1 && abs(colDiff) == 1)
+			if (board[y2][col2] == 'e' || (board[y2][col2] >= 'A' && board[y2][col2] <= 'Z')) return true;
+			
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~QUEEN RULES~~~~~~~~~~~~~~~~~~~~~~~~
+	if (board[y][col] == 'q') {
+		//if they just try to move to some random spot
+		if (abs(rowDiff) != abs(colDiff) && rowDiff != 0 && colDiff != 0) {
+			return false;
+		}
+		/////////////////////////diagonal movements
+		bool ok = true;
+		if (rowDiff > 0 && colDiff > 0) {  //first quadrant
+			int j = col + 1;
+			for (int i = y - 1; i >= y2 && j <= col2; i--) {
+				if (board[i][j] == 'r' || board[i][j] == 'n' || board[i][j] == 'p' || board[i][j] == 'q' || board[i][j] == 'b' || board[i][j] == 'k') {
+					ok = false;
+				}
+				if ((board[i][j] == 'R' || board[i][j] == 'N' || board[i][j] == 'P' || board[i][j] == 'Q' || board[i][j] == 'B' || board[i][j] == 'K') && col2 != j && i != y2) {
+					ok = false;
+				}
+				j++;
+			}
+			if (ok == true) return true; else return false;
+		}
+		if (rowDiff > 0 && colDiff < 0) {  //second quadrant
+			int j = col - 1;
+			for (int i = y - 1; i >= y2 && j >= col2; i--) {
+				if (board[i][j] == 'r' || board[i][j] == 'n' || board[i][j] == 'p' || board[i][j] == 'q' || board[i][j] == 'b' || board[i][j] == 'k') {
+					ok = false;
+				}
+				if ((board[i][j] == 'R' || board[i][j] == 'N' || board[i][j] == 'P' || board[i][j] == 'Q' || board[i][j] == 'B' || board[i][j] == 'K') && col2 != j && i != y2) {
+					ok = false;
+				}
+				j--;
+			}
+			if (ok == true) return true; else return false;
+		}
+		if (rowDiff < 0 && colDiff < 0) {  //third quadrant
+			int j = col - 1;
+			for (int i = y + 1; i <= y2 && j >= col2; i++) {
+				if (board[i][j] == 'r' || board[i][j] == 'n' || board[i][j] == 'p' || board[i][j] == 'q' || board[i][j] == 'b' || board[i][j] == 'k') {
+					ok = false;
+				}
+				if ((board[i][j] == 'R' || board[i][j] == 'N' || board[i][j] == 'P' || board[i][j] == 'Q' || board[i][j] == 'B' || board[i][j] == 'K') && col2 != j && i != y2) {
+					ok = false;
+				}
+				j--;
+			}
+			if (ok == true) return true; else return false;
+		}
+		if (rowDiff < 0 && colDiff > 0) {  //fourth quadrant
+			int j = col + 1;
+			for (int i = y + 1; i <= y2 && j <= col2; i++) {
+				if (board[i][j] == 'r' || board[i][j] == 'n' || board[i][j] == 'p' || board[i][j] == 'q' || board[i][j] == 'b' || board[i][j] == 'k') {
+					ok = false;
+				}
+				if ((board[i][j] == 'R' || board[i][j] == 'N' || board[i][j] == 'P' || board[i][j] == 'Q' || board[i][j] == 'B' || board[i][j] == 'K') && col2 != j && i != y2) {
+					ok = false;
+				}
+				j++;
+			}
+			if (ok == true) return true; else return false;
+		}
+		////////////////////////striaght movements
+		else if (rowDiff > 0 && colDiff == 0) { //up
+			for (int i = y - 1; i >= y2; i--) {
+				if (board[i][col] == 'r' || board[i][col] == 'n' || board[i][col] == 'p' || board[i][col] == 'q' || board[i][col] == 'b' || board[i][col] == 'k') {
+					cout << "some peice is blocking your way!" << endl;
+					return false;
+				}
+				if ((board[i][col] == 'R' || board[i][col] == 'N' || board[i][col] == 'P' || board[i][col] == 'Q' || board[i][col] == 'B' || board[i][col] == 'K') && i != y2) {
+					cout << "some peice is blocking your way!" << endl;
+					return false;
+				}
+			}
+		}
+		else if (rowDiff < 0 && colDiff == 0) { //down
+			for (int i = y + 1; i <= y2; i++) {
+				if (board[i][col] == 'r' || board[i][col] == 'n' || board[i][col] == 'p' || board[i][col] == 'q' || board[i][col] == 'b' || board[i][col] == 'k') {
+					cout << "some peice is blocking your way!" << endl;
+					return false;
+				}
+				if ((board[i][col] == 'R' || board[i][col] == 'N' || board[i][col] == 'P' || board[i][col] == 'Q' || board[i][col] == 'B' || board[i][col] == 'K') && i != y2) {
+					cout << "some peice is blocking your way!" << endl;
+					return false;
+				}
+			}
+		}
+		else if (rowDiff == 0 && colDiff > 0) { //right
+			for (int i = col + 1; i <= col2; i++) {
+				if (board[y][i] == 'r' || board[y][i] == 'n' || board[y][i] == 'p' || board[y][i] == 'q' || board[y][i] == 'b' || board[y][i] == 'k') {
+					cout << "some peice is blocking your way!" << endl;
+					return false;
+				}
+				if ((board[y][i] == 'R' || board[y][i] == 'N' || board[y][i] == 'P' || board[y][i] == 'Q' || board[y][i] == 'B' || board[y][i] == 'K') && i != col2) {
+					cout << "some peice is blocking your way!" << endl;
+					return false;
+				}
+			}
+		}
+		else if (rowDiff == 0 && colDiff < 0) { //left
+			for (int i = col - 1; i >= col2; i--) {
+				if (board[y][i] == 'r' || board[y][i] == 'n' || board[y][i] == 'p' || board[y][i] == 'q' || board[y][i] == 'b' || board[y][i] == 'k') {
+					cout << "some peice is blocking your way!" << endl;
+					return false;
+				}
+				if ((board[y][i] == 'R' || board[y][i] == 'N' || board[y][i] == 'P' || board[y][i] == 'Q' || board[y][i] == 'B' || board[y][i] == 'K') && i != col2) {
+					cout << "some peice is blocking your way!" << endl;
+					return false;
+				}
+			}
+		}
+
+
+		return true;
+	}//end of main condition
+
+	 //~~~~~~~~~~~~~~~~~~~~~~~~KNIGHT RULES~~~~~~~~~~~~~~~~~~~~~~~~
+	if (board[y][col] == 'n') {
+		if (abs(rowDiff)*abs(colDiff) != 2) {
+			cout << "Knights can't move like that." << endl << endl;
+			return false;
+		}
+		if (board[y2][col2] >= 'A' && board[y2][col2] <= 'Z') {
+			return true;
+		}
+		string myPieces = "prnbkq";
+		for (int i = 0; i < myPieces.size(); i++) {
+			if (board[y2][col2] == myPieces[i])
+				return false;
+		}
+		return true;
+	}//end of main condition 
+	 //~~~~~~~~~~~~~~~~~~~~~~~~BISHOP RULES~~~~~~~~~~~~~~~~~~~~~~~~
+	if (board[y][col] == 'b') {
+		bool ok = true;
+		//if they just try to move to some random spot
+		if (abs(rowDiff) != abs(colDiff)) {
+			return false;
+		}
+		else {
+			if (rowDiff > 0 && colDiff > 0) {  //first quadrant
+				int j = col + 1;
+				for (int i = y - 1; i >= y2 && j <= col2; i--) {
+					if (board[i][j] == 'r' || board[i][j] == 'n' || board[i][j] == 'p' || board[i][j] == 'q' || board[i][j] == 'b' || board[i][j] == 'k') {
+						ok = false;
+					}
+					if ((board[i][j] == 'R' || board[i][j] == 'N' || board[i][j] == 'P' || board[i][j] == 'Q' || board[i][j] == 'B' || board[i][j] == 'K') && i != y2 && j != col2) {
+						ok = false;
+					}
+					j++;
+				}
+				if (ok == true) return true; else return false;
+			}
+			else if (rowDiff > 0 && colDiff < 0) {  //second quadrant
+				int j = col - 1;
+				for (int i = y - 1; i >= y2 && j >= col2; i--) {
+					if (board[i][j] == 'r' || board[i][j] == 'n' || board[i][j] == 'p' || board[i][j] == 'q' || board[i][j] == 'b' || board[i][j] == 'k') {
+						ok = false;
+					}
+					if ((board[i][j] == 'R' || board[i][j] == 'N' || board[i][j] == 'P' || board[i][j] == 'Q' || board[i][j] == 'B' || board[i][j] == 'K') && i != y2 && j != col2) {
+						ok = false;
+					}
+					j--;
+				}
+				if (ok == true) return true; else return false;
+			}
+			else if (rowDiff < 0 && colDiff < 0) {  //third quadrant
+				int j = col - 1;
+				for (int i = y + 1; i <= y2 && j >= col2; i++) {
+					if (board[i][j] == 'r' || board[i][j] == 'n' || board[i][j] == 'p' || board[i][j] == 'q' || board[i][j] == 'b' || board[i][j] == 'k') {
+						ok = false;
+					}
+					if ((board[i][j] == 'R' || board[i][j] == 'N' || board[i][j] == 'P' || board[i][j] == 'Q' || board[i][j] == 'B' || board[i][j] == 'K') && i != y2 && j != col2) {
+						ok = false;
+					}
+					j--;
+				}
+				if (ok == true) return true; else return false;
+			}
+			else if (rowDiff < 0 && colDiff > 0) {  //fourth quadrant
+				int j = col + 1;
+				for (int i = y + 1; i <= y2 && j <= col2; i++) {
+					if (board[i][j] == 'r' || board[i][j] == 'n' || board[i][j] == 'p' || board[i][j] == 'q' || board[i][j] == 'b' || board[i][j] == 'k') {
+						ok = false;
+					}
+					if ((board[i][j] == 'R' || board[i][j] == 'N' || board[i][j] == 'P' || board[i][j] == 'Q' || board[i][j] == 'B' || board[i][j] == 'K') && i != y2 && j != col2) {
+						ok = false;
+					}
+					j++;
+				}
+				if (ok == true) return true; else return false;
+			}
+		}//end else
+
+	}//end of main condition
+	 //~~~~~~~~~~~~~~~~~~~~~~~~ROCK RULES~~~~~~~~~~~~~~~~~~~~~~~~~~
+	if (board[y][col] == 'r') {
+		if (rowDiff != 0 && colDiff != 0) return false; //force moving stright in any direction
+
+		else if (rowDiff > 0 && colDiff == 0) {//up
+			for (int i = y - 1; i >= y2; i--) {
+				if ((board[i][col] == 'r' || board[i][col] == 'n' || board[i][col] == 'p' || board[i][col] == 'q' || board[i][col] == 'b' || board[i][col] == 'k')) {
+					cout << "some peice is blocking your way!" << endl; Sleep(10000);
+					return false;
+				}
+				if ((board[i][col] == 'R' || board[i][col] == 'N' || board[i][col] == 'P' || board[i][col] == 'Q' || board[i][col] == 'B' || board[i][col] == 'K') && i != y2) {
+					cout << "some peice is blocking your way!" << endl; Sleep(10000);
+					return false;
+				}
+			}
+		}
+
+		else if (rowDiff < 0 && colDiff == 0) { //down
+			for (int i = y + 1; i <= y2; i++) {
+				if ((board[i][col] == 'r' || board[i][col] == 'n' || board[i][col] == 'p' || board[i][col] == 'q' || board[i][col] == 'b' || board[i][col] == 'k')) {
+					cout << "some peice is blocking your way!" << endl; Sleep(10000);
+					return false;
+				}
+				if ((board[i][col] == 'R' || board[i][col] == 'N' || board[i][col] == 'P' || board[i][col] == 'Q' || board[i][col] == 'B' || board[i][col] == 'K') && i != y2) {
+					cout << "some peice is blocking your way!" << endl; Sleep(10000);
+					return false;
+				}
+			}
+		}
+		else if (rowDiff == 0 && colDiff > 0) { //right
+			for (int i = col + 1; i <= col2; i++) {
+				if ((board[y][i] == 'r' || board[y][i] == 'n' || board[y][i] == 'p' || board[y][i] == 'q' || board[y][i] == 'b' || board[y][i] == 'k') && i != col2) {
+					cout << "some peice is blocking your way!" << endl; Sleep(10000);
+					return false;
+				}
+				if ((board[y][i] == 'R' || board[y][i] == 'N' || board[y][i] == 'P' || board[y][i] == 'Q' || board[y][i] == 'B' || board[y][i] == 'K') && i != col2) {
+					cout << "some peice is blocking your way!" << endl; Sleep(10000);
+					return false;
+				}
+			}
+		}
+		else if (rowDiff == 0 && colDiff < 0) { //left
+			for (int i = col - 1; i >= col2; i--) {
+				if ((board[y][i] == 'r' || board[y][i] == 'n' || board[y][i] == 'p' || board[y][i] == 'q' || board[y][i] == 'b' || board[y][i] == 'k') && i != col2) {
+					cout << "some peice is blocking your way!" << endl; Sleep(10000);
+					return false;
+				}
+				if ((board[y][i] == 'R' || board[y][i] == 'N' || board[y][i] == 'P' || board[y][i] == 'Q' || board[y][i] == 'B' || board[y][i] == 'K') && i != col2) {
+					cout << "some peice is blocking your way!" << endl; Sleep(10000);
+					return false;
+				}
+			}
+		}
+	}//end of rock check
+	return true;
+}
+//=========================================================================================================================//
+void mouse_move() {
+	pos = Mouse::getPosition(window) - Vector2i(offset);
+	/////drag and drop///////
+	//no need to loadPosition().
+	while (window.pollEvent(e))
+	{
+		if (e.type == Event::Closed)
+			window.close();
+		if (e.type == Event::MouseButtonPressed)
+			if (e.key.code == Mouse::Left)
+				for (int i = 0; i < 32; i++)
+					if (f[i].getGlobalBounds().contains(pos.x, pos.y))
+					{
+						if (player == 2 && i < 16) continue;
+						if (player == 1 && i >= 16) continue;
+						isMove = true; n = i;
+						dx = pos.x - f[i].getPosition().x;
+						dy = pos.y - f[i].getPosition().y;
+						oldPos = f[i].getPosition();
+						indexOfPiece = i;
+					}
+
+		if (e.type == Event::MouseButtonReleased && isMove)
+			if (e.key.code == Mouse::Left)
+			{
+				isMove = false;
+				Vector2f p = f[n].getPosition() + Vector2f(size / 2, size / 2);
+				newPos = Vector2f(size*int(p.x / size), size*int(p.y / size));
+				str = toChessNote(oldPos) + toChessNote(newPos);
+				bool valid = isLegal(oldPos, newPos);
+				if (valid) {
+					move(str);
+					position += str + " ";
+					f[n].setPosition(newPos);
+					//arduino_fn(x1, y, x2, y2); //  i have just added this line 
+					//Sleep(10000);
+					swicht_player();
+				}
+				else {
+					f[indexOfPiece].setPosition(oldPos);
+				}
+			}
+	}
+	if (isMove) f[n].setPosition(pos.x - dx, pos.y - dy);
+	return;
+}
+//=========================================================================================================================//
+void advanced() {
+	//comp move
+	str = getNextMove(position);
+	cout << str << endl;
+	oldPos = toCoord(str[0], str[1]);
+	newPos = toCoord(str[2], str[3]);
+
+	for (int i = 0; i < 32; i++) if (f[i].getPosition() == oldPos) n = i;
+
+	/////animation///////
+	for (int k = 0; k < 50; k++)
+	{
+		Vector2f p = newPos - oldPos;
+		f[n].move(p.x / 50, p.y / 50);
+		draw();
+	}
+	move(str);  position += str + " ";
+	f[n].setPosition(newPos);
+	swicht_player();
+}
+//=========================================================================================================================//
+void beginner() {
+	Coordinate Move, End;
+	End.x = -1;
+	End.y = -1;
+	End.Max = -1000;
+	for (int i = 0; i < 8; i++)
+	{
+		for (int j = 0; j < 8; j++)
+		{
+			Coordinate temp = checking(board[i][j], i, j);
+			if (temp.Max > End.Max)
+			{
+				End.x = temp.x;
+				End.y = temp.y;
+				End.Max = temp.Max;
+				Move.x = i;
+				Move.y = j;
+			}
+		}
+	}
+	//str = ""; str += ('a' + Move.y); str += ('0' + 9 - (Move.x + 1)); str += ('a' + End.y); str += ('0' + 9 - (End.x + 1));
+	str = ""; str += ('a' + Move.y); str += ('0' + 9 - (Move.x + 1)); str += ('a' + End.y); str += ('0' + 9 - (End.x + 1));
+	cout << str << endl;
+	oldPos = toCoord(str[0], str[1]);
+	newPos = toCoord(str[2], str[3]);
+	for (int i = 0; i < 32; i++) if (f[i].getPosition() == oldPos) n = i;
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////i want to add something over here 
+	arduino_fn_pc(Move.x, Move.y, End.x, End.y);
+
+	/////animation///////
+	for (int k = 0; k < 50; k++){
+		Vector2f p = newPos - oldPos;
+		f[n].move(p.x / 50, p.y / 50);
+		draw();
+	}
+	move(str);  position += str + " ";
+	f[n].setPosition(newPos);
+	//Sleep(10000);
+	swicht_player();
+}
+//=========================================================================================================================//
+void pre_processing(int level) {
+	//load back ground and pieces
+	t1.loadFromFile("images/figures.png");
+	t2.loadFromFile("images/board.png");
+	sBoard.setTexture(t2);
+
+	//To connect with stockfish.exe
+	if (level == 2) ConnectToEngine("stockfish.exe");
+	//set figures to each of 32 pieces
+	for (int i = 0; i<32; i++) f[i].setTexture(t1);
+	//Load pieces
+	loadPosition();
+	system("cls");
+}
+//=========================================================================================================================//
+
+//=========================================================================================================================//
+int main(){
+	cout << "  ####################" << endl;
+	cout << "  # 1-   BEGINNER    #" << endl;
+	cout << "  ####################" << endl;
+	cout << "  ####################" << endl;
+	cout << "  # 2-   ADVANCED    #" << endl;
+	cout << "  ####################" << endl;
+	int level; std::cin >> level;
+	pre_processing(level);
+	while (window.isOpen()){	
+		draw();
+		if (player == 2) mouse_move();
+		else {
+			if(level == 1 ) beginner();
+			else advanced();
+		}
+	}
+	CloseConnection();
+	return 0;
+}
