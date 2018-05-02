@@ -199,13 +199,11 @@ Coordinate checking(char Piece, int x, int y) {
 					taken_by_piece = true;
 				}
 			}
-
-
 		}//end if(x==1)
 		else {
 			float Begins = Pawn[x][y];
 			float Score = 0;
-			if (board[x + 1][y] == 'e') { //moving one step and its empty 
+			if (board[x + 1][y] == 'e') { //moving one step and its empty
 				float Score = Pawn[x + 1][y];
 				if (Begins - Score > Max) {
 					Place.x = x + 1;
@@ -230,17 +228,17 @@ Coordinate checking(char Piece, int x, int y) {
 					taken_by_piece = true;
 				}
 			}
-			if (board[x - 1][y + 1] == 'r' || board[x - 1][y + 1] == 'q' || board[x - 1][y + 1] == 'k' || board[x - 1][y + 1] == 'p' || board[x - 1][y + 1] == 'n' || board[x - 1][y + 1] == 'b') {
-				float Score = Pawn[x - 1][y + 1];
-				if (board[x - 1][y + 1] == 'r') Score += 50;
-				else if (board[x - 1][y + 1] == 'n')Score += 30;
-				else if (board[x - 1][y + 1] == 'p')Score += 10;
-				else if (board[x - 1][y + 1] == 'q')Score += 90;
-				else if (board[x - 1][y + 1] == 'b')Score += 30;
-				else if (board[x - 1][y + 1] == 'k')Score += 900;
+			if (board[x + 1][y - 1] == 'r' || board[x + 1][y - 1] == 'q' || board[x + 1][y - 1] == 'k' || board[x + 1][y - 1] == 'p' || board[x + 1][y - 1] == 'n' || board[x + 1][y - 1] == 'b') {
+				float Score = Pawn[x + 1][y - 1];
+				if (board[x + 1][y - 1] == 'r') Score += 50;
+				else if (board[x + 1][y - 1] == 'n')Score += 30;
+				else if (board[x + 1][y - 1] == 'p')Score += 10;
+				else if (board[x + 1][y - 1] == 'q')Score += 90;
+				else if (board[x + 1][y - 1] == 'b')Score += 30;
+				else if (board[x + 1][y - 1] == 'k')Score += 900;
 				if (Score - Begins > Max) {
-					Place.x = x - 1;
-					Place.y = y + 1;
+					Place.x = x + 1;
+					Place.y = y - 1;
 					Place.Max = Score - Begins;
 					Max = Place.Max;
 					taken_by_piece = true;
@@ -1439,6 +1437,20 @@ void advanced() {
 	swicht_player();
 }
 //=========================================================================================================================//
+char winner() {
+	int player1 = 0, player2 = 0;
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			if (board[i][j] == 'k') player2++;
+			if (board[i][j] == 'K') player1++;
+		}
+	}
+	if (player1 == 1 && player2 == 1) return 't';//tie
+	if (player1 == 0 && player2 == 1) return 'u';//user
+	if (player1 == 1 && player2 == 0) return 'p';//pc
+
+}
+//=========================================================================================================================//
 void beginner() {
 	Coordinate Move, End;
 	End.x = -1;
@@ -1477,6 +1489,11 @@ void beginner() {
 	move(str);  position += str + " ";
 	f[n].setPosition(newPos);
 	//Sleep(10000);
+	///////////////////////////////////////////////////////////////////////////////////
+	//char win = winner();
+	//should add few lines of code to terminate the program
+	///////////////////////////////////////////////////////////////////////////////////
+
 	swicht_player();
 }
 //=========================================================================================================================//
@@ -1494,8 +1511,6 @@ void pre_processing(int level) {
 	loadPosition();
 	system("cls");
 }
-//=========================================================================================================================//
-
 //=========================================================================================================================//
 int main(){
 	cout << "  ####################" << endl;
