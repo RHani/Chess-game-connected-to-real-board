@@ -587,6 +587,7 @@ Coordinate checking(char Piece, int x, int y) {
 		if (board[x + 1][y + 1] == 'e' || board[x + 1][y + 1] == 'r' || board[x + 1][y + 1] == 'n' || board[x + 1][y + 1] == 'p' || board[x + 1][y + 1] == 'q' || board[x + 1][y + 1] == 'b' || board[x + 1][y + 1] == 'k') {
 			for (int i = x, j = y; i < 7 && j < 7; i++, j++) {
 				float Score = Queen[i][j];
+				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
 				if (board[i][j] == 'r') Score += 50;
 				else if (board[i][j] == 'n')Score += 30;
 				else if (board[i][j] == 'p')Score += 10;
@@ -601,7 +602,6 @@ Coordinate checking(char Piece, int x, int y) {
 					Max = Score - Begins;
 					taken_by_piece = true;
 				}
-				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
 				if (Score > 5) break;
 			}
 		}
@@ -609,6 +609,7 @@ Coordinate checking(char Piece, int x, int y) {
 		if (board[x - 1][y + 1] == 'e' || board[x - 1][y + 1] == 'r' || board[x - 1][y + 1] == 'n' || board[x - 1][y + 1] == 'p' || board[x - 1][y + 1] == 'q' || board[x - 1][y + 1] == 'b' || board[x - 1][y + 1] == 'k') {
 			for (int i = x, j = y; i >0 && j < 7; i--, j++) {
 				float Score = Queen[i][j];
+				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
 				if (board[i][j] == 'r') Score += 50;
 				else if (board[i][j] == 'n')Score += 30;
 				else if (board[i][j] == 'p')Score += 10;
@@ -623,7 +624,6 @@ Coordinate checking(char Piece, int x, int y) {
 					Max = Score - Begins;
 					taken_by_piece = true;
 				}
-				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
 				if (Score > 5) break;
 			}
 		}
@@ -631,6 +631,7 @@ Coordinate checking(char Piece, int x, int y) {
 		if (board[x + 1][y - 1] == 'e' || board[x + 1][y - 1] == 'r' || board[x + 1][y - 1] == 'n' || board[x + 1][y - 1] == 'p' || board[x + 1][y - 1] == 'q' || board[x + 1][y - 1] == 'b' || board[x + 1][y - 1] == 'k') {
 			for (int i = x, j = y; i <7 && j >0; i++, j--) {
 				float Score = Queen[i][j];
+				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
 				if (board[i][j] == 'r') Score += 50;
 				else if (board[i][j] == 'n')Score += 30;
 				else if (board[i][j] == 'p')Score += 10;
@@ -645,7 +646,6 @@ Coordinate checking(char Piece, int x, int y) {
 					Max = Score - Begins;
 					taken_by_piece = true;
 				}
-				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
 				if (Score > 5) break;
 			}
 		}
@@ -653,6 +653,7 @@ Coordinate checking(char Piece, int x, int y) {
 		if (board[x - 1][y - 1] == 'e' || board[x - 1][y - 1] == 'r' || board[x - 1][y - 1] == 'n' || board[x - 1][y - 1] == 'p' || board[x - 1][y - 1] == 'q' || board[x - 1][y - 1] == 'b' || board[x - 1][y - 1] == 'k') {
 			for (int i = x, j = y; i >0 && j >0; i--, j--) {
 				float Score = Queen[i][j];
+				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
 				if (board[i][j] == 'r') Score += 50;
 				else if (board[i][j] == 'n')Score += 30;
 				else if (board[i][j] == 'p')Score += 10;
@@ -667,7 +668,6 @@ Coordinate checking(char Piece, int x, int y) {
 					Max = Score - Begins;
 					taken_by_piece = true;
 				}
-				if (board[i][j] >= 'A' && board[i][j] <= 'Z') break;
 				if (Score > 5) break;
 			}//end of loop
 		}
@@ -675,6 +675,7 @@ Coordinate checking(char Piece, int x, int y) {
 		if (board[x + 1][y] == 'e' || board[x + 1][y] == 'r' || board[x + 1][y] == 'n' || board[x + 1][y] == 'p' || board[x + 1][y] == 'q' || board[x + 1][y] == 'b' || board[x + 1][y] == 'k') { //moving down
 			for (int i = x + 1; i < 8; i++) {
 				float Score = Queen[i][y];
+				if (board[i][y] >= 'A' && board[i][y] <= 'Z') break;
 				if (board[i][y] == 'r') Score += 50;
 				else if (board[i][y] == 'n')Score += 30;
 				else if (board[i][y] == 'p')Score += 10;
@@ -689,14 +690,14 @@ Coordinate checking(char Piece, int x, int y) {
 					Max = Score - Begins;
 					taken_by_piece = true;
 				}
-				if (board[i][y] >= 'A' && board[i][y] <= 'Z') break;
-				if (Score > 10) break;
+				if (Score > 5) break;
 			}
 		}//end of down if
 
 		if (board[x - 1][y] == 'e' || board[x - 1][y] == 'r' || board[x - 1][y] == 'n' || board[x - 1][y] == 'p' || board[x - 1][y] == 'q' || board[x - 1][y] == 'b' || board[x - 1][y] == 'k') { //moving up
 			for (int i = x - 1; i > 1; i--) {
 				float Score = Queen[i][y];
+				if (board[i][y] >= 'A' && board[i][y] <= 'Z') break;
 				if (board[i][y] == 'r') Score += 50;
 				else if (board[i][y] == 'n')Score += 30;
 				else if (board[i][y] == 'p')Score += 10;
@@ -711,7 +712,6 @@ Coordinate checking(char Piece, int x, int y) {
 					Max = Score - Begins;
 					taken_by_piece = true;
 				}
-				if (board[i][y] >= 'A' && board[i][y] <= 'Z') break;
 				if (Score > 5) break;
 			}
 		}//end of up if
@@ -719,6 +719,7 @@ Coordinate checking(char Piece, int x, int y) {
 		if (board[x][y + 1] == 'e' || board[x][y + 1] == 'r' || board[x][y + 1] == 'n' || board[x][y + 1] == 'p' || board[x][y + 1] == 'q' || board[x][y + 1] == 'b' || board[x][y + 1] == 'k') { //moving up
 			for (int i = y + 1; i < 8; i++) {
 				float Score = Queen[x][i];
+				if (board[x][i] >= 'A' && board[x][i] <= 'Z') break;
 				if (board[x][i] == 'r') Score += 50;
 				else if (board[x][i] == 'n')Score += 30;
 				else if (board[x][i] == 'p')Score += 10;
@@ -733,7 +734,6 @@ Coordinate checking(char Piece, int x, int y) {
 					Max = Score - Begins;
 					taken_by_piece = true;
 				}
-				if (board[x][i] >= 'A' && board[x][i] <= 'Z') break;
 				if (Score > 5) break;
 			}
 		}//end of right if
@@ -741,6 +741,7 @@ Coordinate checking(char Piece, int x, int y) {
 		if (board[x][y - 1] == 'e' || board[x][y - 1] == 'r' || board[x][y - 1] == 'n' || board[x][y - 1] == 'p' || board[x][y - 1] == 'q' || board[x][y - 1] == 'b' || board[x][y - 1] == 'k') { //moving up
 			for (int i = y - 1; i > 1; i--) {
 				float Score = Queen[x][i];
+				if (board[x][i] >= 'A' && board[x][i] <= 'Z') break;
 				if (board[x][i] == 'r') Score += 50;
 				else if (board[x][i] == 'n')Score += 30;
 				else if (board[x][i] == 'p')Score += 10;
@@ -755,10 +756,9 @@ Coordinate checking(char Piece, int x, int y) {
 					Max = Score - Begins;
 					taken_by_piece = true;
 				}
-				if (board[x][i] >= 'A' && board[x][i] <= 'Z') break;
 				if (Score > 5) break;
 			}
-		}//end of leftif
+		}//end of left if
 
 	}//end of if queen condition
 	 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Knight~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -919,9 +919,6 @@ Coordinate checking(char Piece, int x, int y) {
 			}
 		}
 	}
-
-
-
 	return Place;
 }
 //=========================================================================================================================//
@@ -1438,9 +1435,9 @@ char winner() {
 			if (board[i][j] == 'K') player1++;
 		}
 	}
-	if (player1 == 1 && player2 == 1) return 't';//tie
-	if (player1 == 0 && player2 == 1) return 'u';//user
-	if (player1 == 1 && player2 == 0) return 'p';//pc
+	if (player1 == 1 && player2 == 1) return 't'; //tie
+	if (player1 == 0 && player2 == 1) return 'u'; //user
+	if (player1 == 1 && player2 == 0) return 'p'; //pc
 }
 //=========================================================================================================================//
 void beginner() {
